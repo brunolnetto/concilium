@@ -9,6 +9,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view
 from concilium.domain.models.canonical import tipos_obra_validos
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
@@ -317,13 +318,8 @@ def register(server: FastMCP) -> None:
                 if skills_plano:
                     out["invocations"] = skills_plano
                 if canonical_plano and canonical_plano.resultado:
-                    res = canonical_plano.resultado
-                    out["resultado_atual"] = {
-                        "preco_venda": res.venda.total_com_bdi,
-                        "custo_total": res.custo.total,
-                        "margem_pct": res.margem_pct,
-                        "status_margem": res.status_margem,
-                    }
+                    # #206: only the exact financial view; no legacy float, no margin semaphore.
+                    out["resultado_atual"] = {"financeiro_exato": build_exact_financial_view(canonical_plano)}
                 if canonical_plano:
                     out["pipeline_integridade"] = canonical_plano.pipeline_integridade or "PARCIAL"
         except Exception:
@@ -369,12 +365,8 @@ def register(server: FastMCP) -> None:
                         "Corrija e re-execute a partir do checkpoint válido."
                     )
                 if canonical.resultado:
-                    res = canonical.resultado
                     resultado_info: dict[str, Any] = {
-                        "preco_venda": res.venda.total_com_bdi,
-                        "custo_total": res.custo.total,
-                        "margem_pct": res.margem_pct,
-                        "status_margem": res.status_margem,
+                        "financeiro_exato": build_exact_financial_view(canonical),
                     }
                     if integridade == "CORROMPIDO":
                         resultado_info["AVISO"] = "Valores baseados em pipeline corrompido — inválidos"

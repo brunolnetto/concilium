@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from ...helpers import financeiro_exato as fx
 from ...infra.api import api_call
 from ...molecules.common import render_paginated_table
 from ...molecules.components import render_mapping_table
@@ -84,24 +85,21 @@ def _do_compare(project_id: str, left: str, right: str, base_url: str, actor: st
             st.error(f"Erro ao comparar versões: {exc}")
         return
     deltas = result.get("deltas", {})
-    col1, col2, col3 = st.columns(3)
-    col1.metric(
-        "Delta custo total",
-        f"{deltas.get('custo_total', 0.0):,.2f}",
-        delta=f"{deltas.get('custo_total', 0.0):,.2f}",
-        delta_color="inverse",
-    )
-    col2.metric(
-        "Delta margem %", f"{deltas.get('margem_pct', 0.0):,.2f}", delta=f"{deltas.get('margem_pct', 0.0):,.2f}"
-    )
-    col3.metric(
+    st.metric(
         "Delta PE deficit",
         f"{deltas.get('pe_deficit_items', 0.0):,.0f}",
         delta=f"{deltas.get('pe_deficit_items', 0.0):,.0f}",
         delta_color="inverse",
     )
-    st.subheader("Deltas detalhados")
-    st.dataframe([{"indicador": k, "delta": v} for k, v in deltas.items()], width="stretch")
+    st.subheader("Deltas do financeiro exato (direita − esquerda)")
+    not_evaluated = fx.delta_not_evaluated_lines(deltas)
+    if not_evaluated:
+        st.warning("Financeiro exato: **não avaliado** em ao menos uma das versões; nenhum delta é exibido.")
+        for line in not_evaluated:
+            st.markdown(f"- {line}")
+    else:
+        st.dataframe(fx.delta_rows(deltas), hide_index=True, width="stretch")
+        st.caption(fx.APROXIMACAO_TEXTO)
     render_mapping_table("Comparação de versões", result)
 
 

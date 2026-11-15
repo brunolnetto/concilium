@@ -6,6 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view, compact_view
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import _project, _wrap_response
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
@@ -27,6 +28,13 @@ def _resolve_escopo_id(store: Any, escopo_id: str | None = None) -> str:
     if len(escopos) == 1:
         return escopos[0]
     raise ValueError(f"Projeto tem múltiplos escopos. Especifique escopo_id. Disponíveis: {escopos}")
+
+
+def _financeiro_exato_resumo(canonical: Any) -> dict[str, Any] | None:
+    """Compact exact financial view of a plan; None when the plan has no result yet."""
+    if canonical is None or canonical.resultado is None:
+        return None
+    return compact_view(build_exact_financial_view(canonical))
 
 
 def register(server: FastMCP) -> None:
@@ -51,7 +59,7 @@ def register(server: FastMCP) -> None:
                         "plano_id": pid,
                         "nome": ps.meta.get("nome", pid),
                         "status": ps.meta.get("status"),
-                        "margem_pct": can.resultado.margem_pct if can and can.resultado else None,
+                        "financeiro_exato": _financeiro_exato_resumo(can),
                     }
                 )
             out.append(

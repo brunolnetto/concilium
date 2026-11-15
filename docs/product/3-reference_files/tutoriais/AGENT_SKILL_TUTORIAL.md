@@ -499,7 +499,8 @@ export CONCILIUM__JOB_GC_INTERVAL_MINUTES=30
 ```python
 consultar_status(project_id="rodovia-ce040-lote09")
 # → {pipeline_integridade: "COMPLETO",
-#    resultado_atual: {preco_venda: 85_639_774.05, margem: 0.204}, ...}
+#    resultado_atual: {financeiro_exato: {status: "AVALIADO", cost: {...}, price: "…/…", layers: {...}, gates: {...}}}, ...}
+#    (financeiro exato: racionais exatos; status "NAO_AVALIADO" traz reasons com o que falta — sem margem, sem semáforo)
 ```
 
 > ⚠️ Se `pipeline_integridade == "CORROMPIDO"`, os valores financeiros **não devem ser usados**.

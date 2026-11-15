@@ -43,10 +43,7 @@ class ReplanSimResult(BaseModel):
 
 class ResumoProjetoSchema(BaseModel):
     project_id: str
-    venda_total_com_bdi: float
-    custo_total: float
-    resultado_financeiro: float
-    margem_pct: float
-    status_margem: str
+    # #206: the exact financial view (concilium.exact-financial-view.v1); no legacy floats, no margin semaphore.
+    financeiro_exato: dict[str, Any]
     breakdown_escopos: list[dict[str, Any]]
     avisos: list[str]

@@ -158,3 +158,21 @@ sem arredondamento a centavos (CONVENCOES §5). A verba mensal \(\Gamma_l^{VM,\t
 **Fora desta norma.** Derivar linhas ou janela mobilizada de catálogo/perfil: os valores são declarados por projeto até existir dado calibrado.
 
 Evidência: oráculo independente `site_indirects_reference.py` e vetor `economic_site_indirects_v1.json` (conversão mensal→semanal, racional não arredondado, eventos únicos, semana única, ano de 53 semanas, preço por categoria, casos de falha; e os casos do escopo obrigatório em `scope_vectors`), com paridade de produção (`site_indirect_journal.py`, `parse_site_indirects_scope`); testes de integração P20 (totais, custo direto inalterado, atribuição, adulterações rejeitadas), P21 (markup e camadas por subcategoria) e da fronteira JSON do Skill06, incluindo a reexecução do livro persistido pelo avaliador P23; testes do avaliador para escopo ausente, inválido e contraditório; os projetos ouro declaram `NO_SITE_INDIRECTS` com fonte, e os E2E cobrem escopo omitido (nunca GO, sem preço), `DECLARED` sem linhas e uma execução com indiretos declarados conferida pelo diferencial independente.
+
+## N11 — financeiro não avaliado: causa persistida e classificada (#206)
+
+"Não avaliado" nunca é um estado mudo. Quando o preço exato não é avaliado, a causa é **persistida com o resultado** em `pricing_diagnostics.reason` (estado `UNKNOWN`) — não apenas como aviso da execução — inclusive quando a Skill 06 não consegue sequer montar a declaração de preço (termos do perfil incompletos, perfil de BDI do projeto só em ponto flutuante, declaração de projeto indisponível). Todo leitor do resultado (resumo, telas, MCP, CLI, documentos) mostra o texto registrado literalmente e, quando o texto nomeia a causa, a norma e a ação corretiva correspondentes. A classificação é uma tabela ordenada (vale a primeira linha cujo marcador ocorre no texto, sem distinção de maiúsculas):
+
+| Ordem | Marcadores no texto registrado | Código | Norma |
+|---|---|---|---|
+| 0 | `missing p21_pricing_evidence` | `DECLARACAO_PRECO_AUSENTE` se há contratos sem testemunha P16; senão `MOTIVO_NAO_REGISTRADO` | — |
+| 1 | `site_indirects`, `site-indirects`, `site indirects` | `ESCOPO_INDIRETOS_CANTEIRO` | N10 |
+| 2 | `bdi_projeto_exato`, `floating point`, `exact form` | `BDI_PROJETO_NAO_EXATO` | N9.1 |
+| 3 | `precificacao_exata`, `tabela_bdi`, `piso_bdi_regulatorio`, `escopo_estoque`, `faixa_margem_aceitavel`, `regulatory BDI floor`, `work type` | `TERMOS_DE_PRECO_DO_PERFIL` | N9 |
+| 4 | `markup layers`, `markup_layers` | `CAMADAS_MARKUP_NAO_DECLARADAS` | N9 |
+| 5 | `p18_consumption_preview_enabled` | `LEDGERS_EXATOS_DESATIVADOS` | N8 |
+| — | qualquer outro texto | `P21_NAO_AVALIADO` (texto literal) | — |
+
+Causas estruturais são lidas do próprio canônico, antes do texto registrado: contratos de pool sem testemunha P16 (`CONTRATO_SEM_TESTEMUNHA_P16`, N8), e, quando a Skill 06 falha fechada sem registrar resultado, essa causa precede `RESULTADO_AUSENTE`. Nenhum número — exato ou legado — acompanha um estado não avaliado. Não se inventa motivo: se o canônico não registra a causa, o estado é `MOTIVO_NAO_REGISTRADO`.
+
+Evidência: oráculo `not_evaluated_reason_reference.py` e vetor `economic_not_evaluated_reasons_v1.json`, construído com os textos reais gravados pela produção; paridade com a visão financeira exata; E2E ouro para contratos sem testemunha e escopo de canteiro ausente.

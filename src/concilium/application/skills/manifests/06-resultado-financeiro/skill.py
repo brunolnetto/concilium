@@ -189,6 +189,7 @@ def run_resultado_financeiro(
     project_bdi_unavailable = inputs.get(PROJECT_BDI_UNAVAILABLE_INPUT)
     legacy_project_bdi = next((k for k in ("bdi_perfil", "perfil_bdi") if inputs.get(k) is not None), None)
     p21_project_gap: str | None = None
+    p21_declaration_gap: str | None = None
     if project_bdi is not None and p21_declaration is not None:
         p21_project_gap = (
             f"{PROJECT_BDI_INPUT} and p21_pricing_evidence are mutually exclusive: a hand-written "
@@ -217,10 +218,11 @@ def run_resultado_financeiro(
         # without complete exact pricing terms leaves the price not evaluated.
         p21_declaration, p21_gaps = build_p21_declaration(perfil, canonical, catalogo, project_bdi)
         if p21_declaration is None:
+            p21_declaration_gap = "; ".join(p21_gaps)
             validacoes.append(ValidacaoItem(
                 codigo="VAL-P21-NAO-AVALIADO",
                 status="AVISO",
-                mensagem="Preço exato não avaliado (sem estimativa): " + "; ".join(p21_gaps),
+                mensagem="Preço exato não avaliado (sem estimativa): " + p21_declaration_gap,
             ))
     # N10: the project declares its site-indirects scope (and, when DECLARED,
     # the lines) beside the profile-built pricing declaration; hand-written
@@ -259,6 +261,14 @@ def run_resultado_financeiro(
             except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError) as exc:
                 p21_context = {"source_build_error": str(exc)}
         inputs = {**inputs, "p21_pricing_evidence": p21_context}
+    elif (p21_project_gap or p21_declaration_gap) is not None:
+        # No declaration could be built: persist WHY in the pricing diagnostics,
+        # so every reader of the result (not only this run's warnings) can say
+        # what is missing instead of a generic "evidence missing".
+        inputs = {
+            **inputs,
+            "p21_pricing_evidence": {"source_build_error": p21_project_gap or p21_declaration_gap},
+        }
 
     # Estágio 3 — Consolidação financeira
     res_con = _run_consolidacao(canonical, inputs, perfil)

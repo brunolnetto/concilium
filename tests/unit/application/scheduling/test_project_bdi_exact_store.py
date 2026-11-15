@@ -351,6 +351,15 @@ def test_float_only_project_profile_leaves_the_exact_price_not_evaluated(monkeyp
     assert "legacy floating-point BDI profile" in reasons[0] and "re-save" in reasons[0]
     # Not priced at the company default: there is no layered result at all.
     assert result.markup_layers is None
+    # The cause is persisted with the result, not only in this run's warnings (W3):
+    # any later reader can say why the price was not evaluated and how to fix it.
+    assert result.pricing_diagnostics["status"] == "UNKNOWN"
+    assert "re-save" in result.pricing_diagnostics["reason"]
+    from concilium.application.scheduling.exact_financial_view import build_exact_financial_view
+
+    view = build_exact_financial_view({"resultado": result.model_dump(mode="json"), "contratos_recurso": []})
+    codes = {reason["code"] for reason in view["reasons"]}
+    assert view["status"] == "NAO_AVALIADO" and "BDI_PROJETO_NAO_EXATO" in codes, view["reasons"]
 
 
 def test_damaged_saved_declaration_leaves_the_exact_price_not_evaluated(monkeypatch) -> None:

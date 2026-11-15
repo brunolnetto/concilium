@@ -20,6 +20,7 @@ import typer
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_basic import app
+from tests.support.exact_financial import evaluated_resultado
 
 runner = CliRunner()
 
@@ -507,12 +508,15 @@ class TestAudit:
         assert "canônico" in result.output or "canonical" in result.output.lower() or "Sem dados" in result.output
 
     def test_audit_with_resultado_and_no_conflitos(self):
-        resultado = SimpleNamespace(
-            margem_pct=0.12,
-            status_margem="OK",
-            custo=SimpleNamespace(total=1_500_000.0),
-            validacoes=[],
-        )
+        # #206: audit prints the exact layers and gate states; the legacy margin
+        # (was asserted as "12.00%") and its status no longer appear.
+        resultado = evaluated_resultado(legacy={
+            "margem_pct": 0.12,
+            "status_margem": "OK",
+            "custo": SimpleNamespace(total=1_500_000.0),
+            "venda": SimpleNamespace(total_com_bdi=9.0),
+            "resultado_financeiro": 1.0,
+        })
         canonical = SimpleNamespace(
             pipeline_integridade="COMPLETO",
             resultado=resultado,
@@ -530,8 +534,31 @@ class TestAudit:
             result = _runner.invoke(mini_app, ["obra@v1"])
 
         assert result.exit_code == 0
-        assert "12.00%" in result.output
+        assert "12.00%" not in result.output and "Margem" not in result.output
+        assert "1,500,000" not in result.output
+        for expected in ("Custo total:", "Overhead:", "Lucro:", "Tributos:", "Preço:", "Gates de preço: PASS"):
+            assert expected in result.output
         assert "Sem conflitos" in result.output
+
+    def test_audit_with_legacy_only_resultado_shows_not_evaluated(self):
+        resultado = SimpleNamespace(
+            margem_pct=0.12,
+            status_margem="OK",
+            custo=SimpleNamespace(total=1_500_000.0),
+            validacoes=[],
+        )
+        canonical = SimpleNamespace(pipeline_integridade="COMPLETO", resultado=resultado, conflitos_pico=[])
+        proj = _fake_project(nome="Obra Legada", load_canonical=canonical)
+
+        with (
+            patch(f"{MODULE}.parse_project_version", return_value=("obra", "v1")),
+            patch(f"{MODULE}.resolve_project", return_value=proj),
+        ):
+            result = CliRunner().invoke(_build_audit_app(), ["obra@v1"])
+
+        assert result.exit_code == 0
+        assert "Financeiro exato: não avaliado" in result.output
+        assert "12.00%" not in result.output and "1,500,000" not in result.output and "Margem" not in result.output
 
     def test_audit_with_conflitos(self):
         resultado = SimpleNamespace(

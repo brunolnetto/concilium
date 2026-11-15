@@ -6,6 +6,7 @@ import mimetypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from concilium.application.scheduling.exact_financial_view import exact_deltas, view_from_summary
 from concilium.domain.services.project_rules import (
     calculate_deltas,
     resolve_compare_version,
@@ -91,7 +92,12 @@ class _VersionsArtifactsMixin(_Base):
 
         left_summary = build_summary(left)
         right_summary = build_summary(right)
-        deltas = calculate_deltas(left_summary, right_summary)
+        deltas: dict[str, Any] = dict(calculate_deltas(left_summary, right_summary))
+        # Exact deltas exist only when both versions are evaluated; otherwise
+        # they are None with the reasons (never a difference against zero).
+        deltas["financeiro_exato"] = exact_deltas(
+            view_from_summary(left_summary), view_from_summary(right_summary)
+        )
 
         # ADR-119 D4: enriquecer com metadados de autoria das versões comparadas
         version_history = project.meta.get("version_history") or {}

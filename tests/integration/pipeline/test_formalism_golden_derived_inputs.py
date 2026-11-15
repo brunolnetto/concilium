@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view
+from concilium.application.services.service_support import build_summary
 from tests.support.golden_differential import differential_report
 from tests.support.golden_pipeline import catalog, load_canonical, run, scenario
 
@@ -108,6 +110,11 @@ def test_without_declared_contract_terms_nothing_is_estimated(tmp_path: Path) ->
     assert {c.tipo_id for c in canonical.contratos_recurso} == set(declared)  # per-resource contracts, unpriced
     warnings = " ".join(str(a) for skill in result["skills_log"] for a in (skill.get("avisos") or []))
     assert "UNKNOWN_CONTRACT" in warnings
+    # W3: what every screen/tool reads — not evaluated, with the actionable cause and no number.
+    view = build_exact_financial_view(canonical, certificate)
+    assert view["status"] == "NAO_AVALIADO" and "price" not in view and "cost" not in view
+    assert "CONTRATO_SEM_TESTEMUNHA_P16" in {reason["code"] for reason in view["reasons"]}, view["reasons"]
+    assert build_summary(canonical)["financeiro_exato"]["status"] == "NAO_AVALIADO"
 
 
 def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Path) -> None:
@@ -177,6 +184,23 @@ def test_profile_prices_the_exact_ledger_with_nothing_hand_written(tmp_path: Pat
     # The independent oracles recompute cost, price and BDI from the same ledgers.
     report = differential_report(canonical, catalog(spec), certificate)
     assert report["first_divergence"] is None
+    # W3: the one exact view every consumer reads carries those same exact numbers and
+    # never the legacy fields (whose price here is ~3x lower and whose "margin" is a float).
+    view = build_exact_financial_view(canonical, certificate)
+    assert view["status"] == "AVALIADO" and view["reasons"] == []
+    assert Fraction(view["price"]) == price and Fraction(view["cost"]["total"]) == Fraction(total["cost"])
+    assert {k: Fraction(view["layers"][k]) for k in ("overhead", "profit", "taxes")} == {
+        "overhead": Fraction(total["overhead"]),
+        "profit": Fraction(total["profit"]),
+        "taxes": Fraction(total["tax_total"]),
+    }
+    assert Fraction(view["profit_layer_share"]) == share
+    assert view["categories_below_floor"] == ["COMB", "MAT"]
+    assert view["gates"]["regulatory_status"] == view["gates"]["profitability_status"] == "FAIL"
+    assert view["certificate"]["decision"] != "GO"
+    legacy = canonical.resultado
+    assert Fraction(str(legacy.venda.total_custo_plus)) != price  # the legacy number is not what is shown
+    assert "margem_pct" not in build_summary(canonical) and "status_margem" not in build_summary(canonical)
 
 
 def test_profile_run_without_a_site_indirects_scope_is_not_priced(tmp_path: Path) -> None:
@@ -196,6 +220,9 @@ def test_profile_run_without_a_site_indirects_scope_is_not_priced(tmp_path: Path
     assert "site_indirects_scope is required" in resultado.pricing_gates["reason"]
     assert "total_cost" not in resultado.pricing_diagnostics
     assert resultado.p20_financial_reconciliation is None
+    view = build_exact_financial_view(load_canonical(result, service), certificate)
+    assert view["status"] == "NAO_AVALIADO"
+    assert "ESCOPO_INDIRETOS_CANTEIRO" in {reason["code"] for reason in view["reasons"]}, view["reasons"]
 
 
 def test_declared_site_indirects_enter_the_exact_ledger_and_the_price(tmp_path: Path) -> None:

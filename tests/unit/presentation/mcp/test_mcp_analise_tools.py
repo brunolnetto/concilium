@@ -8,12 +8,14 @@ Coverage targets:
 from __future__ import annotations
 
 import datetime
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.analise import register
+from tests.support.exact_financial import evaluated_resultado, unknown_resultado
 
 # ---------------------------------------------------------------------------
 # Module-level patch paths
@@ -68,6 +70,7 @@ def _make_canonical(
     instancias_recurso: list | None = None,
     recursos_consumiveis: list | None = None,
     resumo_estoque_consumiveis: list | None = None,
+    exact: bool = True,
 ) -> MagicMock:
     """Return a minimal canonical MagicMock with fields accessed by the tools."""
     if data_termino is None:
@@ -80,11 +83,16 @@ def _make_canonical(
     canonical.conflitos_pico = conflitos_pico
     canonical.pipeline_integridade = pipeline_integridade
 
-    resultado = MagicMock()
-    resultado.custo.total = custo_total
-    resultado.margem_pct = margem_pct
-    resultado.status_margem = status_margem
-    canonical.resultado = resultado
+    # #206: the tools read only the exact view. The legacy floats stay on the
+    # result (absurd on purpose) to prove they never reach the output.
+    canonical.resultado = evaluated_resultado(legacy={
+        "venda": MagicMock(total_com_bdi=custo_total * 9),
+        "custo": MagicMock(total=custo_total),
+        "resultado_financeiro": custo_total,
+        "margem_pct": margem_pct,
+        "status_margem": status_margem,
+    }) if exact else unknown_resultado()
+    canonical.p18_consumption_preview = {"schema": "fixture"}
 
     canonical.contratos_recurso = contratos_recurso
     canonical.instancias_recurso = instancias_recurso
@@ -137,7 +145,7 @@ def test_register_creates_three_tools(monkeypatch, tmp_path):
 
 class TestAuditarPlano:
     def test_happy_path(self, monkeypatch, tmp_path):
-        """Happy path: returns wrapped dict with viabilidade and financeiro."""
+        """Happy path: viabilidade + the exact financial view (layers and gate states), no legacy floats."""
         canonical = _make_canonical(custo_total=500_000, margem_pct=20.0, status_margem="VERDE")
         store = _make_store_with_canonical(canonical)
         tools = _make_tools(monkeypatch, tmp_path)
@@ -151,9 +159,17 @@ class TestAuditarPlano:
         assert "schema_version" in result
         assert result["escopo_id"] == "ESC-01"
         assert result["plano_id"] == "PL-01"
-        assert result["financeiro"]["custo_total"] == 500_000
-        assert result["financeiro"]["margem_pct"] == 20.0
-        assert result["financeiro"]["status_margem"] == "VERDE"
+        assert "financeiro" not in result
+        fin = result["financeiro_exato"]
+        assert fin["status"] == "AVALIADO"
+        assert fin["cost"]["total"] == "51/2" and fin["price"] == "159/5"
+        assert fin["layers"] == {
+            "cost": "51/2", "overhead": "81/40", "profit": "171/40", "taxes": "0", "price": "159/5",
+        }
+        assert fin["gates"]["status"] == "PASS"
+        dumped = json.dumps(result, default=str)
+        assert "status_margem" not in dumped and "margem_pct" not in dumped and "VERDE" not in dumped
+        assert "500000" not in dumped
         assert "viabilidade" in result
         assert "gargalos" in result
 
@@ -280,7 +296,7 @@ class TestAuditarPlano:
         assert "plano ativo" in result["erro"]
 
     def test_resultado_none_uses_defaults(self, monkeypatch, tmp_path):
-        """When canonical.resultado is None/falsy, financeiro uses default values."""
+        """Without a result nothing is defaulted: NAO_AVALIADO with the reason (was 0 / 0 / VERMELHO)."""
         canonical = _make_canonical()
         canonical.resultado = None  # force falsy resultado
 
@@ -293,10 +309,11 @@ class TestAuditarPlano:
         ):
             result = tools["auditar_plano"]("proj-test")
 
-        fin = result["financeiro"]
-        assert fin["custo_total"] == 0
-        assert fin["margem_pct"] == 0
-        assert fin["status_margem"] == "VERMELHO"
+        assert "financeiro" not in result
+        fin = result["financeiro_exato"]
+        assert fin["status"] == "NAO_AVALIADO"
+        assert [r["code"] for r in fin["reasons"]] == ["RESULTADO_AUSENTE"]
+        assert "cost" not in fin and "price" not in fin
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +340,7 @@ class TestCompararPlanos:
         return store
 
     def test_happy_path_both_have_canonical(self, monkeypatch, tmp_path):
-        """Both plans have canonical data — comparacao contains two dicts."""
+        """Both plans evaluated — each carries the exact view and the exact deltas are B − A."""
         term_a = datetime.date(2026, 12, 31)
         term_b = datetime.date(2027, 3, 31)
 
@@ -338,12 +355,31 @@ class TestCompararPlanos:
 
         assert "schema_version" in result
         comp = result["comparacao"]
-        assert comp["PL-A"]["custo"] == 1_000_000
-        assert comp["PL-A"]["margem"] == 25.0
+        assert comp["PL-A"]["financeiro_exato"]["cost"]["total"] == "51/2"
         assert comp["PL-A"]["termino"] == "2026-12-31"
-        assert comp["PL-B"]["custo"] == 900_000
-        assert comp["PL-B"]["margem"] == 30.0
+        assert comp["PL-B"]["financeiro_exato"]["price"] == "159/5"
         assert comp["PL-B"]["termino"] == "2027-03-31"
+        assert "custo" not in comp["PL-A"] and "margem" not in comp["PL-A"]
+        deltas = result["deltas_financeiro_exato"]
+        assert deltas["status"] == "AVALIADO"
+        assert deltas["deltas"]["custo_total"] == "0" and deltas["deltas"]["preco"] == "0"
+
+    def test_not_evaluated_plan_has_no_number_and_no_delta(self, monkeypatch, tmp_path):
+        """A plan whose exact price was not evaluated shows reasons; deltas are None, not vs. zero."""
+        can_a = _make_canonical(data_termino=datetime.date(2026, 12, 31))
+        can_b = _make_canonical(data_termino=datetime.date(2027, 3, 31), custo_total=900_000, exact=False)
+        store = self._make_comparar_store(can_a, can_b)
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with patch(_PROJECT_PATCH, return_value=store):
+            result = tools["comparar_planos"]("proj-test", "ESC-01", "PL-A", "PL-B")
+
+        fin_b = result["comparacao"]["PL-B"]["financeiro_exato"]
+        assert fin_b["status"] == "NAO_AVALIADO" and fin_b["reasons"]
+        deltas = result["deltas_financeiro_exato"]
+        assert deltas["status"] == "NAO_AVALIADO"
+        assert all(value is None for value in deltas["deltas"].values())
+        assert {r["side"] for r in deltas["reasons"]} == {"right"}
 
     def test_one_plan_no_canonical(self, monkeypatch, tmp_path):
         """Plan without canonical data shows 'Sem dados' string."""

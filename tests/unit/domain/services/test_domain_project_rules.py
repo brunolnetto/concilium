@@ -140,86 +140,36 @@ class TestResolveCompareVersion:
 
 
 class TestCalculateDeltas:
-    KEYS = ["preco_venda_total", "custo_total", "margem_pct", "resultado_bruto", "pe_deficit_items"]
+    """#206: the domain delta covers only the break-even counter.
 
-    def test_all_keys_present_in_result(self):
-        result = calculate_deltas({}, {})
-        assert set(result.keys()) == set(self.KEYS)
+    The former float deltas of the legacy summary keys (preco_venda_total,
+    custo_total, margem_pct, resultado_bruto) were removed with those keys;
+    their exact replacements are tested with the exact financial view
+    (tests/unit/application/scheduling/test_exact_financial_view.py).
+    """
 
-    def test_sign_convention_is_right_minus_left(self):
-        left = {"preco_venda_total": 100.0}
-        right = {"preco_venda_total": 150.0}
+    LEGACY_KEYS = ["preco_venda_total", "custo_total", "margem_pct", "resultado_bruto"]
+
+    def test_only_the_break_even_counter_is_compared(self):
+        assert set(calculate_deltas({}, {}).keys()) == {"pe_deficit_items"}
+
+    def test_legacy_financial_keys_produce_no_delta(self):
+        left = {key: 100.0 for key in self.LEGACY_KEYS}
+        right = {key: 150.0 for key in self.LEGACY_KEYS}
         result = calculate_deltas(left, right)
-        assert result["preco_venda_total"] == pytest.approx(50.0)
+        assert not set(self.LEGACY_KEYS) & set(result)
 
-    def test_negative_delta(self):
-        left = {"custo_total": 200.0}
-        right = {"custo_total": 100.0}
-        result = calculate_deltas(left, right)
-        assert result["custo_total"] == pytest.approx(-100.0)
-
-    def test_missing_key_defaults_to_zero(self):
-        # If a key is absent from either dict, treat as 0.0
-        result = calculate_deltas({}, {"preco_venda_total": 50.0})
-        assert result["preco_venda_total"] == pytest.approx(50.0)
-
-        result2 = calculate_deltas({"custo_total": 30.0}, {})
-        assert result2["custo_total"] == pytest.approx(-30.0)
-
-    def test_none_values_coerced_to_zero(self):
-        left = {"margem_pct": None}
-        right = {"margem_pct": None}
-        result = calculate_deltas(left, right)
-        assert result["margem_pct"] == pytest.approx(0.0)
-
-    def test_none_on_one_side_only(self):
-        left = {"resultado_bruto": None}
-        right = {"resultado_bruto": 75.0}
-        result = calculate_deltas(left, right)
-        assert result["resultado_bruto"] == pytest.approx(75.0)
-
-    def test_zero_delta_when_equal(self):
-        summary = {k: 42.0 for k in self.KEYS}
-        result = calculate_deltas(summary, summary)
-        for key in self.KEYS:
-            assert result[key] == pytest.approx(0.0)
-
-    def test_fully_populated_dicts(self):
-        left = {
-            "preco_venda_total": 1000.0,
-            "custo_total": 800.0,
-            "margem_pct": 20.0,
-            "resultado_bruto": 200.0,
-            "pe_deficit_items": 3.0,
-        }
-        right = {
-            "preco_venda_total": 1200.0,
-            "custo_total": 900.0,
-            "margem_pct": 25.0,
-            "resultado_bruto": 300.0,
-            "pe_deficit_items": 1.0,
-        }
-        result = calculate_deltas(left, right)
-        assert result["preco_venda_total"] == pytest.approx(200.0)
-        assert result["custo_total"] == pytest.approx(100.0)
-        assert result["margem_pct"] == pytest.approx(5.0)
-        assert result["resultado_bruto"] == pytest.approx(100.0)
-        assert result["pe_deficit_items"] == pytest.approx(-2.0)
+    def test_missing_or_none_counter_defaults_to_zero(self):
+        assert calculate_deltas({}, {"pe_deficit_items": 2})["pe_deficit_items"] == pytest.approx(2.0)
+        assert calculate_deltas({"pe_deficit_items": None}, {})["pe_deficit_items"] == pytest.approx(0.0)
 
     def test_integer_values_are_cast_to_float(self):
-        left = {"preco_venda_total": 10}
-        right = {"preco_venda_total": 20}
-        result = calculate_deltas(left, right)
-        assert isinstance(result["preco_venda_total"], float)
-        assert result["preco_venda_total"] == pytest.approx(10.0)
+        result = calculate_deltas({"pe_deficit_items": 1}, {"pe_deficit_items": 3})
+        assert isinstance(result["pe_deficit_items"], float)
 
     def test_extra_keys_in_summaries_are_ignored(self):
-        left = {"preco_venda_total": 5.0, "extra_key": 999.0}
-        right = {"preco_venda_total": 10.0, "another_extra": 123.0}
-        result = calculate_deltas(left, right)
-        assert "extra_key" not in result
-        assert "another_extra" not in result
-        assert result["preco_venda_total"] == pytest.approx(5.0)
+        result = calculate_deltas({"extra_key": 999.0}, {"financeiro_exato": {"status": "AVALIADO"}})
+        assert set(result) == {"pe_deficit_items"}
 
     def test_pe_deficit_items_delta(self):
         left = {"pe_deficit_items": 5.0}

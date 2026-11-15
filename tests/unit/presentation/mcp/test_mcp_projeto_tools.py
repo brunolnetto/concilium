@@ -10,6 +10,7 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.projeto import register
+from tests.support.exact_financial import evaluated_resultado, unknown_resultado
 
 # ---------------------------------------------------------------------------
 # Helpers to build a minimal valid BDI payload for salvar_perfil_bdi
@@ -474,11 +475,14 @@ class TestConsultarStatus:
         store.list_escopos.return_value = ["esc-principal"]
 
         canonical = MagicMock()
-        canonical.resultado = MagicMock()
-        canonical.resultado.venda.total_com_bdi = 1_000_000.0
-        canonical.resultado.custo.total = 750_000.0
-        canonical.resultado.margem_pct = 25.0
-        canonical.resultado.status_margem = "OK"
+        # #206: evaluated exact pricing; the legacy floats are present and must not surface.
+        canonical.resultado = evaluated_resultado(legacy={
+            "venda": MagicMock(total_com_bdi=1_000_000.0),
+            "custo": MagicMock(total=750_000.0),
+            "resultado_financeiro": 250_000.0,
+            "margem_pct": 25.0,
+            "status_margem": "OK",
+        })
         canonical.pipeline_integridade = "COMPLETO"
 
         active_plan = MagicMock()
@@ -503,7 +507,11 @@ class TestConsultarStatus:
         assert result["escopo_ativo"] == "esc-principal"
         assert result["plano_ativo"] == "plano-001"
         assert len(result["invocations"]) == 1
-        assert result["resultado_atual"]["preco_venda"] == 1_000_000.0
+        assert set(result["resultado_atual"]) == {"financeiro_exato"}
+        fin = result["resultado_atual"]["financeiro_exato"]
+        assert fin["status"] == "AVALIADO" and fin["price"] == "159/5" and fin["cost"]["total"] == "51/2"
+        assert fin["layers"]["overhead"] == "81/40" and fin["gates"]["status"] == "PASS"
+        assert "1000000" not in json.dumps(result, default=str)
         assert result["pipeline_integridade"] == "COMPLETO"
 
     def test_no_active_plan_in_escopo(self, tools, tmp_path):
@@ -698,11 +706,15 @@ class TestConsultarStatus:
         canonical = MagicMock()
         canonical.pipeline_blocked_from = []
         canonical.pipeline_integridade = "COMPLETO"
-        canonical.resultado = MagicMock()
-        canonical.resultado.venda.total_com_bdi = 500.0
-        canonical.resultado.custo.total = 400.0
-        canonical.resultado.margem_pct = 20.0
-        canonical.resultado.status_margem = "OK"
+        # #206: a result with only legacy floats (exact pricing not evaluated).
+        canonical.resultado = unknown_resultado(legacy={
+            "venda": MagicMock(total_com_bdi=500.0),
+            "custo": MagicMock(total=400.0),
+            "resultado_financeiro": 100.0,
+            "margem_pct": 20.0,
+            "status_margem": "OK",
+        })
+        canonical.contratos_recurso = []
         store.load_canonical.return_value = canonical
 
         with (
@@ -712,7 +724,11 @@ class TestConsultarStatus:
             result = tools["consultar_status"](project_id="proj-ok")
 
         assert "AVISO" not in result.get("resultado_atual", {})
-        assert result["resultado_atual"]["preco_venda"] == 500.0
+        # Was: preco_venda == 500.0 (legacy float). Now: not evaluated, with reasons, no number.
+        fin = result["resultado_atual"]["financeiro_exato"]
+        assert set(result["resultado_atual"]) == {"financeiro_exato"}
+        assert fin["status"] == "NAO_AVALIADO" and fin["reasons"]
+        assert "cost" not in fin and "price" not in fin
 
 
 # ===========================================================================

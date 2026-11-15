@@ -90,15 +90,15 @@ class TestResumoProjetoSchema:
     def test_instanciacao(self):
         s = ResumoProjetoSchema(
             project_id="p1",
-            venda_total_com_bdi=10_000_000.0,
-            custo_total=8_500_000.0,
-            resultado_financeiro=1_500_000.0,
-            margem_pct=0.15,
-            status_margem="VIAVEL",
+            financeiro_exato={"schema": "concilium.exact-financial-view.v1", "status": "NAO_AVALIADO", "reasons": []},
             breakdown_escopos=[],
             avisos=[],
         )
-        assert s.margem_pct == 0.15
+        assert s.financeiro_exato["status"] == "NAO_AVALIADO"
+        # #206: the legacy float fields and the margin semaphore are gone from the schema.
+        assert not {"venda_total_com_bdi", "custo_total", "resultado_financeiro", "margem_pct", "status_margem"} & set(
+            ResumoProjetoSchema.model_fields
+        )
 
 
 
