@@ -26,24 +26,35 @@ if TYPE_CHECKING:
 
 from ...infra.api import api_call
 from ._bdi_editor import _hydrate_indiretos_from_overrides, render_bdi_editor
+from ._bdi_exato_editor import render_bdi_exato
 
 
 def render_bdi_tab(base_url: str, project: dict, actor: str) -> None:
-    """Render isolated BDI editor for use in standalone expander or tab.
+    """Render the project BDI tab: the exact declaration first, the legacy editor apart.
 
-    Fetches benchmark-reference from API and delegates to render_bdi_editor.
+    The exact declaration (N9.1) is the only project BDI the exact price reads.
+    The float editor writes Skill06 overrides consumed by the legacy stage only;
+    it is kept, labelled as legacy, and never writes the exact declaration.
     """
     project_id = project["project_id"]
-    try:
-        reference = api_call(
-            method="GET",
-            path=f"/api/projects/{project_id}/benchmark-reference",
-            base_url=base_url,
-            actor=actor,
+    render_bdi_exato(base_url, project_id, actor)
+    st.divider()
+    with st.expander("Legado (ponto flutuante) — não usado pelo preço exato", expanded=False):
+        st.warning(
+            "Editor legado: grava fatores em ponto flutuante nos overrides do Skill 06 (bdi_aplicado, tabela_bdi, "
+            "tax_scenario), lidos apenas pelo estágio legado. O preço exato ignora estes valores e eles nunca são "
+            "convertidos para a declaração exata acima."
         )
-    except Exception:
-        reference = {}
-    render_bdi_editor(base_url, project_id, actor, reference)
+        try:
+            reference = api_call(
+                method="GET",
+                path=f"/api/projects/{project_id}/benchmark-reference",
+                base_url=base_url,
+                actor=actor,
+            )
+        except Exception:
+            reference = {}
+        render_bdi_editor(base_url, project_id, actor, reference)
 
 
 _INDIR_REGIMES = ["PJ", "CLT-mensalista", "CLT-horista"]

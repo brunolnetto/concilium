@@ -4,6 +4,10 @@ Permite ao Engenheiro Sênior visualizar e atualizar o perfil BDI de um projeto
 via HiL (Human-in-the-Loop). O perfil é um snapshot imutável versionado;
 cada atualização gera um BdiPerfilDiff para rastreabilidade.
 
+`bdi show` exibe o que o preço exato lê (N9.1, #206): a declaração exata salva
+e as camadas efetivas por categoria. O perfil em ponto flutuante só é
+identificado como legado; os seus valores não são exibidos nem convertidos.
+
 """
 
 from __future__ import annotations
@@ -16,12 +20,17 @@ from typing import Any
 import typer
 from rich import print as rprint
 from rich.console import Console
-from rich.table import Table
 
 from concilium.application.scheduling.exact_pricing_declaration import (
     PROJECT_SCHEMA,
     PricingDeclarationError,
     validate_project_declaration,
+)
+from concilium.application.scheduling.project_bdi_exact_status import (
+    ESTADO_TEXTO,
+    EXACT,
+    exact_project_bdi_status,
+    load_project_profile,
 )
 from concilium.application.scheduling.project_bdi_exact_store import (
     ProjectBdiExactError,
@@ -42,58 +51,80 @@ def _perfil_path(project_root: Path) -> Path:
     return project_root / "bdi" / "perfil_bdi.json"
 
 
-def _bdi_aplic_flags(aplic: dict) -> list:
-    def flag(k: str) -> str:
-        return "[OK]" if aplic.get(k, {}).get("aplicavel") else "[X]"
+def _load_profile(project: Any) -> tuple[str | None, dict[str, Any] | None, str | None]:
+    """Perfil da construtora do contexto do projeto: `(perfil_id, perfil, motivo)`."""
+    from concilium.application.runtime import Runtime
+    from concilium.presentation.cli.shared import _config_root
 
-    return [flag("iss"), flag("pis"), flag("cofins"), flag("cssl"), flag("ir")]
+    return load_project_profile(Runtime(_config_root()), project.meta)
+
+
+_ORIGEM = {"profile": "perfil", "project": "projeto"}
+
+def _campo(nome: str, campo: dict[str, str]) -> str:
+    return f"{nome}={campo['valor']} [{_ORIGEM[campo['origem']]}]"
+
+
+def bdi_status_lines(projeto: str, status: dict[str, Any]) -> list[str]:
+    """Linhas de texto simples de `bdi show` a partir do status exato do projeto."""
+    estado = status["estado"]
+    lines = [f"Perfil BDI — {projeto}", f"Estado: {estado} — {ESTADO_TEXTO[estado]}"]
+    if status["motivo"]:
+        lines.append(f"Motivo: {status['motivo']}")
+    registro = status["registro"]
+    if registro is not None:
+        lines += [
+            f"  Versão:          {registro['versao']}",
+            f"  Confirmado por:  {registro['confirmado_por']}",
+            f"  Data:            {registro['confirmado_em']}",
+            f"  Content hash:    {registro['content_hash']}",
+        ]
+        if registro.get("motivo_revisao"):
+            lines.append(f"  Motivo revisão:  {registro['motivo_revisao']}")
+        lines.append(f"  Fonte:           {status['declaracao']['fonte']}")
+        lines.append("Campos declarados pelo projeto (os demais são do perfil da construtora):")
+        lines += [f"  {c['linha']}.{c['campo']} = {c['valor']}" for c in status["campos_declarados"]]
+    camadas = status["camadas"]
+    if camadas is not None:
+        lines.append(
+            f"Camadas efetivas por categoria (perfil '{status['perfil_id']}' fundido com o projeto; "
+            "valores exatos, origem entre colchetes):"
+        )
+        for categoria, c in camadas["categorias"].items():
+            lines.append(
+                f"  {categoria} (linha {c['linha']}, {c['natureza']}): markup = {c['markup']} "
+                f"(≈ {c['markup_aprox']}, aproximado)"
+            )
+            lines.append(f"    overhead: {_campo('ac', c['ac'])}  {_campo('rsg', c['rsg'])}  {_campo('df', c['df'])}")
+            lines.append(f"    lucro:    {_campo('l', c['l'])}")
+            lines.append("    tributos: " + "  ".join(_campo(nome, t) for nome, t in c["tributos"].items()))
+    elif status["camadas_motivo"]:
+        lines.append(f"Camadas efetivas não exibidas: {status['camadas_motivo']}")
+    legado = status["perfil_legado"]
+    if legado["existe"]:
+        lines.append(
+            f"Perfil legado em ponto flutuante: bdi/perfil_bdi.json v{legado.get('versao', '?')} "
+            f"(confirmado por {legado.get('confirmado_por', '?')}) — não é usado pelo preço exato e nunca é convertido."
+        )
+    if estado != EXACT:
+        lines.append(
+            f"Para declarar em forma exata: concilium bdi update {projeto} --from-file exato.json "
+            f"--confirmado-por <nome> (JSON com schema {PROJECT_SCHEMA}, números como strings exatas)."
+        )
+    return lines
 
 
 @app.command("show")
 def bdi_show(
     projeto: str = typer.Argument(..., help="Nome ou UUID do projeto."),
 ) -> None:
-    """Exibe o perfil BDI atual do projeto."""
+    """Exibe a declaração exata de BDI do projeto e as camadas efetivas por categoria (N9.1)."""
     project = resolve_project(projeto)
-    path = _perfil_path(project.root)
-
-    if not path.exists():
-        rprint("[yellow]Nenhum perfil BDI encontrado para este projeto.[/yellow]")
-        rprint(f"  Use [bold]concilium bdi update {projeto} --from-file perfil.json[/bold] para configurar.")
-        raise typer.Exit(0)
-
-    perfil = json.loads(path.read_text(encoding="utf-8"))
+    perfil_id, perfil, motivo = _load_profile(project)
+    status = exact_project_bdi_status(project, perfil, perfil_id=perfil_id, perfil_motivo=motivo)
     console = Console()
-
-    console.rule(f"[bold cyan]Perfil BDI — {projeto}[/bold cyan]")
-    rprint(f"  Versão:          [bold]{perfil.get('versao', '?')}[/bold]")
-    rprint(f"  Content hash:    {perfil.get('content_hash', '?')}")
-    rprint(f"  Confirmado por:  {perfil.get('confirmado_por', '?')}")
-    rprint(f"  Data:            {perfil.get('data_confirmacao', '?')}")
-    if perfil.get("motivo_revisao"):
-        rprint(f"  Motivo revisão:  {perfil['motivo_revisao']}")
-
-    # Tributário
-    trib = perfil.get("tributario", {})
-    if trib:
-        rprint("\n[bold]Regime Tributário:[/bold]")
-        rprint(f"  Regime: {trib.get('regime', '?')}")
-        rprint(f"  Município: {trib.get('municipio', '?')}")
-        rprint(f"  ISS municipal: {trib.get('iss_aliquota_municipal', 0) * 100:.1f}%")
-        # Show per-category applicability
-        cats_display = ["mao_obra", "material", "servicos", "indireto", "diesel"]
-        t = Table("Categoria", "ISS", "PIS", "COFINS", "CSSL", "IR", show_header=True)
-        for cat_key in cats_display:
-            aplic = trib.get(cat_key, {})
-            t.add_row(cat_key, *_bdi_aplic_flags(aplic))
-        console.print(t)
-
-    # Lucro
-    lucro = perfil.get("lucro", {})
-    if lucro:
-        rprint("\n[bold]Metas de Lucro (%):[/bold]")
-        for campo, valor in lucro.items():
-            rprint(f"  {campo}: {valor:.1f}%")
+    for line in bdi_status_lines(projeto, status):
+        console.print(line, markup=False, highlight=False, soft_wrap=True)
 
 
 def _bu_show_bdi_diff(

@@ -1216,82 +1216,8 @@ class TestHelperSavePlanSpace:
 # ============================================================================
 
 
-class TestBdiShow:
-    def _make_project(self, tmp_path: Path, project_name: str = "mypro") -> MagicMock:
-        proj_dir = tmp_path / project_name
-        proj_dir.mkdir(parents=True)
-        mock_proj = MagicMock()
-        mock_proj.root = proj_dir
-        return mock_proj
-
-    def test_bdi_show_no_perfil(self, tmp_path):
-        """No perfil_bdi.json → yellow warning, exit 0."""
-        mock_proj = self._make_project(tmp_path)
-        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
-            result = runner.invoke(bdi_app, ["show", "mypro"])
-        assert result.exit_code == 0
-        assert "Nenhum perfil BDI" in result.output
-
-    def test_bdi_show_with_perfil(self, tmp_path):
-        """perfil_bdi.json present → fields displayed."""
-        mock_proj = self._make_project(tmp_path)
-        bdi_dir = mock_proj.root / "bdi"
-        bdi_dir.mkdir()
-        perfil = {
-            "versao": 1,
-            "content_hash": "abc123",
-            "confirmado_por": "Eng. Test",
-            "data_confirmacao": "2026-01-01T00:00:00Z",
-            "tributario": {
-                "regime": "lucro_real",
-                "municipio": "São Paulo",
-                "iss_aliquota_municipal": 0.05,
-                "mao_obra": {"iss": {"aplicavel": True}},
-            },
-            "lucro": {"lucro_bruto": 8.0},
-        }
-        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(perfil), encoding="utf-8")
-        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
-            result = runner.invoke(bdi_app, ["show", "mypro"])
-        assert result.exit_code == 0
-        assert "Eng. Test" in result.output
-
-    def test_bdi_show_with_motivo_revisao(self, tmp_path):
-        """motivo_revisao is shown when present."""
-        mock_proj = self._make_project(tmp_path)
-        bdi_dir = mock_proj.root / "bdi"
-        bdi_dir.mkdir()
-        perfil = {
-            "versao": 2,
-            "content_hash": "def456",
-            "confirmado_por": "Eng. B",
-            "motivo_revisao": "Revisão anual",
-            "tributario": {"regime": "simples", "municipio": "RJ", "iss_aliquota_municipal": 0.02},
-            "lucro": {},
-        }
-        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(perfil), encoding="utf-8")
-        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
-            result = runner.invoke(bdi_app, ["show", "mypro"])
-        assert result.exit_code == 0
-        assert "Revisão anual" in result.output
-
-    def test_bdi_show_empty_tributario_skips_section(self, tmp_path):
-        """Line 68 false branch: empty 'tributario' dict skips the tributário table."""
-        mock_proj = self._make_project(tmp_path)
-        bdi_dir = mock_proj.root / "bdi"
-        bdi_dir.mkdir()
-        perfil = {
-            "versao": 1,
-            "content_hash": "xyz",
-            "confirmado_por": "Eng. C",
-            "tributario": {},
-            "lucro": {"lucro_bruto": 8.0},
-        }
-        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(perfil), encoding="utf-8")
-        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
-            result = runner.invoke(bdi_app, ["show", "mypro"])
-        assert result.exit_code == 0
-        assert "Regime Tributário" not in result.output
+# `bdi show` displays the exact declaration and its status (N9.1, #206); the float
+# profile is only identified as legacy. Covered in test_bdi_show_exato.py.
 
 
 # ============================================================================
@@ -1523,36 +1449,13 @@ class TestBdiUpdate:
 # commands_bdi.py — helper functions
 # ============================================================================
 
-from concilium.presentation.cli.commands_bdi import _bdi_aplic_flags, _perfil_path  # noqa: E402
+from concilium.presentation.cli.commands_bdi import _perfil_path  # noqa: E402
 
 
 class TestBdiHelpers:
     def test_perfil_path(self, tmp_path):
         p = _perfil_path(tmp_path)
         assert p == tmp_path / "bdi" / "perfil_bdi.json"
-
-    def test_bdi_aplic_flags_all_true(self):
-        aplic = {k: {"aplicavel": True} for k in ["iss", "pis", "cofins", "cssl", "ir"]}
-        flags = _bdi_aplic_flags(aplic)
-        assert all(f == "[OK]" for f in flags)
-
-    def test_bdi_aplic_flags_all_false(self):
-        aplic = {}
-        flags = _bdi_aplic_flags(aplic)
-        assert all(f == "[X]" for f in flags)
-
-    def test_bdi_aplic_flags_mixed(self):
-        aplic = {
-            "iss": {"aplicavel": True},
-            "pis": {"aplicavel": False},
-            "cofins": {"aplicavel": True},
-            "cssl": {},
-            "ir": {"aplicavel": True},
-        }
-        flags = _bdi_aplic_flags(aplic)
-        assert flags[0] == "[OK]"
-        assert flags[1] == "[X]"
-        assert flags[2] == "[OK]"
 
 
 # ============================================================================

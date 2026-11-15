@@ -109,3 +109,60 @@ class _RunVersionMixin(_Base):
     def delete_override(self, project_id: str, skill_id: str, actor: str = "system") -> dict[str, Any]:
         return self._dependencies.override_service.delete_override(project_id, skill_id, actor=actor)
 
+    # N9.1 (#206): the project's exact BDI declaration — the only project BDI the exact price reads.
+
+    def _project_bdi_profile(self, project: Any) -> tuple[str | None, dict[str, Any] | None, str | None]:
+        from concilium.application.runtime import Runtime
+        from concilium.application.scheduling.project_bdi_exact_status import load_project_profile
+
+        return load_project_profile(Runtime(self.config_root), project.meta)
+
+    def get_project_bdi_exato(self, project_id: str) -> dict[str, Any]:
+        """Status of the saved exact declaration and the effective layers per category."""
+        from concilium.application.scheduling.project_bdi_exact_status import exact_project_bdi_status
+
+        project = self._dependencies.repository.get_project(project_id)
+        perfil_id, perfil, motivo = self._project_bdi_profile(project)
+        return exact_project_bdi_status(project, perfil, perfil_id=perfil_id, perfil_motivo=motivo)
+
+    def save_project_bdi_exato(
+        self,
+        project_id: str,
+        declaracao: dict[str, Any],
+        *,
+        confirmado_por: str,
+        motivo_revisao: str | None,
+        actor: str = "system",
+    ) -> dict[str, Any]:
+        """Validate (merged over the profile rows when known) and save a new version.
+
+        Raises ``ProjectBdiExactError`` with the reason; nothing is written then.
+        """
+        from concilium.application.scheduling.project_bdi_exact_status import (
+            exact_project_bdi_status,
+            profile_rows_for_validation,
+        )
+        from concilium.application.scheduling.project_bdi_exact_store import save_exact_project_bdi
+
+        project = self._dependencies.repository.get_project(project_id)
+        perfil_id, perfil, motivo = self._project_bdi_profile(project)
+        salvo = save_exact_project_bdi(
+            project,
+            project_id,
+            declaracao,
+            confirmado_por=confirmado_por,
+            motivo_revisao=motivo_revisao,
+            profile_rows=profile_rows_for_validation(perfil),
+        )
+        self._dependencies.audit_service.log(
+            project,
+            action="save_project_bdi_exato",
+            actor=actor,
+            payload={"confirmado_por": confirmado_por, "motivo_revisao": motivo_revisao},
+            result={"versao": salvo["versao"], "content_hash": salvo["content_hash"]},
+        )
+        return {
+            "salvo": {key: salvo[key] for key in ("versao", "content_hash", "confirmado_em", "diff") if key in salvo},
+            "status": exact_project_bdi_status(project, perfil, perfil_id=perfil_id, perfil_motivo=motivo),
+        }
+
