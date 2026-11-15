@@ -1,5 +1,5 @@
 {
- "$comment": "P23 golden RFP fixture (#23 criterion 1). Real pipeline via PipelineService, procurement_intent=rfp. Catalog = resolved 'mendeslobo' master + fixture_cpus bound to the only calibrated productions (PROD-USINAGEM-BGTC-001 / PROD-USINAGEM-CBUQ-001, SICRO 6416078); composicao_itens = SICRO per-unit coefficients taken from each material's own description. P16 tariffs: SICRO monthly price / s_mes (1461/336), cents, idle = active, mob/demob 0 (absent from catalog); labour hourly x 48 h. P21 catalog/regulatory basis = derived C^cat (recomputed by the independent oracle in the test). Regulatory floor 1/5 is a fixture value, not a TCU citation.",
+ "$comment": "P23 golden RFP fixture (#23 criterion 1). Real pipeline via PipelineService, procurement_intent=rfp. Catalog = resolved 'mendeslobo' master + fixture_cpus bound to the only calibrated productions (PROD-USINAGEM-BGTC-001 / PROD-USINAGEM-CBUQ-001, SICRO 6416078); composicao_itens = SICRO per-unit coefficients taken from each material's own description. P16 tariffs: SICRO monthly price / s_mes (1461/336), cents, idle = active, mob/demob 0 (absent from catalog); labour hourly x 48 h. P21 catalog/regulatory basis = derived C^cat (recomputed by the independent oracle in the test). Regulatory floor 1/5 is a fixture value, not a TCU citation. P21 markup layers are fixture assumptions, not company data: every category declares AC 10%, R+S+G 0, DF 0, profit L = 2/11 and no taxes on the price, so (1 + 1/10)(1 + 2/11) = 13/10 and bdi_by_category = 3/10 is exactly the layers' markup; the profit layer is (11/10 * 2/11)/(13/10) = 2/13 of the price (>= minimum 1/20).",
  "nome": "golden-rfp-fixture",
  "contexto_id": "mendeslobo",
  "dates": {
@@ -455,6 +455,43 @@
      "MAT": "3/10",
      "COMB": "3/10",
      "IND": "3/10"
+    },
+    "markup_layers": {
+     "MO": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "EQ": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "MAT": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "COMB": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     },
+     "IND": {
+      "ac": "0.10",
+      "rsg": "0",
+      "df": "0",
+      "l": "2/11",
+      "taxes": {}
+     }
     },
     "catalog": {
      "amount": "14595095171066909197/343113658500",

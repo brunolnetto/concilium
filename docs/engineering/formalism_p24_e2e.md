@@ -41,18 +41,19 @@ Each run must not be GO, must carry the expected decision, must name the origina
 | Falsifier | Mutation | Gate | Decision |
 |---|---|---|---|
 | V1 | calendar ends before the scope can close | V1 | NOGO |
-| V2 | markup below the regulatory floor over C^cat | V2 | NOGO |
+| V2 | layers redeclared with no overhead and profit L = 1/10 → markup 1/10, below the 1/5 floor over C^cat; the profit layer is 1/11 of the price ≥ 1/20 | V2 and its regulatory basis only (V1, V3–V6, price, P20, PROFITABILITY PASS) | NOGO |
 | V2 | declared basis ≠ derived C^cat | V2 | not GO |
 | V3 | P16 exact tariffs withheld | V3 | NOGO |
-| V4/PRICE | negative markup (P ≤ C_tot): P21 refuses negative category rates, no price is published | PRICE_PRESENT | NOGO |
+| V4/PRICE | negative profit layer L = −1 (P ≤ C_tot): P21 refuses negative layer rates, no price is published | PRICE_PRESENT | NOGO |
+| PRICE | `markup_layers` removed, flat `bdi_by_category` 3/10 kept: layers are mandatory (P23 N9), nothing is priced | PRICE_PRESENT (V1, V3, V5, V6 PASS) | NOGO |
 | V5 | activity bound to an uncalibrated production | V5 | not GO |
 | V6 | RCPSP conflict: pool smaller than the team | V6 | NOGO |
 | unpriced input | catalog price of a consumed input removed | PRICE_PRESENT (P18 fails closed naming `eap-01/MA-BRITA-1`) | NOGO |
-| PROFITABILITY | scenario 2, expensive plant mob/demob (R_i ≤ 1.5) at 2% markup: BDI over C^cat ≈ 27.5% ≥ 20% floor, margin 1/51 < 1/20 | PROFITABILITY only (V1–V6, regulatory basis, price, P20 PASS) | NOGO |
+| PROFITABILITY | scenario 2, layers redeclared as AC 1/4, L 1/25: (5/4)(26/25) = 13/10, the golden markup 3/10 — same price, same BDI over C^cat ≥ 1/5 floor, (P − C)/P = 3/13; profit layer 1/26 of the price < 1/20 | PROFITABILITY only (V1–V6, regulatory basis, price, P20 PASS) | NOGO |
 | RFI | skills 01–06 | — | never an RFP certificate |
 | post-issuance mutation | source changed after a recorded GO | — | INVALIDATED / NOT_CERTIFIABLE |
 
-A negative margin with BDI above the floor is unreachable by construction: category markups are nonnegative, so P ≥ C_tot. The reachable unprofitable case is the margin below the declared minimum, tested above.
+A negative margin with BDI above the floor is unreachable by construction: layer rates are nonnegative, so P ≥ C_tot. The reachable unprofitable case is the profit layer's share of the price below the declared minimum (the only profitability criterion, P23 N9), tested above.
 
 Differential corruptions (no extra run): each must be reported as the first divergence in its phase — PHYSICAL cell, POOL cost booked twice, CONSUMPTION, forged C^cat (CATALOG), forged price and a duplicated P20 ledger row (PRICE, unexplained currency delta).
 
@@ -73,7 +74,7 @@ Every transformed run must itself be a clean GO with no DIVERGE in the different
 | Profile | Where | Content | Measured (8-core dev box) | Budget |
 |---|---|---|---|---|
 | fast | required `Tests` job | 2 golden runs + differential, corruptions, fronts guard, invalidation | ~3 min | inside the job |
-| slow | `formalism-e2e-nightly.yml` (cron + manual) | 10 falsifier runs + 6 metamorphic runs + 3 derived-input runs (#206: no hand-written `rcpsp_spec`) | ~13 min, slowest test 142 s | 360 s per test, 2700 s total (`scripts/check_test_budget.py` on the JUnit report), job timeout 60 min |
+| slow | `formalism-e2e-nightly.yml` (cron + manual) | 11 falsifier runs + 6 metamorphic runs + 3 derived-input runs (#206: no hand-written `rcpsp_spec`) | ~13 min, slowest test 142 s | 360 s per test, 2700 s total (`scripts/check_test_budget.py` on the JUnit report), job timeout 60 min |
 
 ## Defects found (fixed in the P24 packages)
 

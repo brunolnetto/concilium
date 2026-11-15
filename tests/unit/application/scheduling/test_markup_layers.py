@@ -48,6 +48,33 @@ def test_production_layers_match_the_oracle_vector(case: dict) -> None:
     assert str(total.profit / total.price) == case["expected"]["profit_layer_share"]
 
 
+@pytest.mark.parametrize("case", [c for c in VECTORS if "expected_error" in c], ids=lambda c: c["case_id"])
+def test_production_refuses_what_the_oracle_refuses(case: dict) -> None:
+    """Missing layers, negative rates and taxes >= 100% have no price in production either."""
+    with pytest.raises(ValueError):
+        rates = {
+            category: parse_layer_rates(raw, category) for category, raw in case["case"].get("rates", {}).items()
+        }
+        decompose_by_category(((category, Fraction(cost)) for category, cost in case["case"]["costs"].items()), rates)
+
+
+@pytest.mark.parametrize("fixture", ["spec.json", "spec_sharing.json"])
+def test_golden_fixture_layers_are_the_vector_set_and_give_the_declared_markup(fixture: str) -> None:
+    """The golden RFP fixtures declare the hand-checked fixture layer set; their
+    bdi_by_category (3/10) is exactly that set's markup and the profit share is 2/13."""
+    spec = json.loads((ROOT / "tests/fixtures/formalism_golden_rfp" / fixture).read_text(encoding="utf-8"))
+    evidence = spec["skill_inputs"]["06-resultado-financeiro"]["p21_pricing_evidence"]
+    vector = next(c for c in VECTORS if c["case_id"] == "golden_fixture_layers_markup_three_tenths")
+    assert evidence["markup_layers"] == vector["case"]["rates"]
+    layers = parse_markup_layers(evidence["markup_layers"])
+    assert {c: str(rates.beta) for c, rates in layers.items()} == evidence["bdi_by_category"]
+    assert set(evidence["bdi_by_category"].values()) == {"3/10"}
+    one = layers["MO"].decompose(Fraction(1))
+    assert one.profit / one.price == Fraction(vector["expected"]["profit_layer_share"]) == Fraction(2, 13)
+    assert one.profit / one.price >= Fraction(evidence["minimum_profit_margin"])
+    assert "fixture assumptions" in spec["$comment"]
+
+
 def test_layers_are_linear_so_instance_and_aggregate_agree() -> None:
     """Decomposing each posting and adding equals decomposing the summed cost."""
     rates = parse_layer_rates(LABOUR, "MO")

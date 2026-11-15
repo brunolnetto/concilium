@@ -37,6 +37,21 @@ def test_hand_checked_values_are_pinned() -> None:
     assert Fraction(labour["taxes"]) == Fraction("0.0973") * Fraction(1172731, 9027)
     assert by_id["supply_layer_is_profit_only"]["profit_layer_share"] == "1/26"
     assert by_id["aggregate_adds_layers_and_weights_the_floor"]["aggregate_floor"] == "239/2000"
+    # Golden fixture layer set: (1 + 1/10)(1 + 2/11) = 13/10; profit 1/5 of cost, 2/13 of the price.
+    fixture = by_id["golden_fixture_layers_markup_three_tenths"]
+    assert fixture["total"] == {"cost": "660", "overhead": "66", "profit": "132", "taxes": "0", "price": "858"}
+    assert Fraction(fixture["total"]["price"]) / Fraction(fixture["total"]["cost"]) - 1 == Fraction(3, 10)
+    assert fixture["profit_layer_share"] == "2/13"
+    # Same markup 3/10, different layers: the profit share is what the minimum sees.
+    thin = by_id["same_markup_thin_profit_fails_only_the_profit_criterion"]
+    assert (thin["total"]["price"], thin["profit_layer_share"]) == ("130", "1/26")
+    assert Fraction(thin["profit_layer_share"]) < Fraction(1, 20) < Fraction(3, 13)
+    assert by_id["profit_only_markup_one_tenth"]["profit_layer_share"] == "1/11"
+
+
+def test_oracle_is_stdlib_only() -> None:
+    source = (Path(__file__).parent / "markup_layers_reference.py").read_text(encoding="utf-8")
+    assert "concilium" not in source
 
 
 def test_layers_always_add_up_to_the_price() -> None:

@@ -174,17 +174,42 @@ def _p21(spec: dict) -> dict:
     return spec["skill_inputs"]["06-resultado-financeiro"]["p21_pricing_evidence"]
 
 
-def _markup(rate: str):
-    return lambda s: _p21(s).update(bdi_by_category={k: rate for k in ("MO", "EQ", "MAT", "COMB", "IND")})
+_CATEGORIES = ("MO", "EQ", "MAT", "COMB", "IND")
 
 
-def _expensive_plant_mobilisation_at_two_percent_markup(spec: dict) -> None:
-    """Real cost rises above C^cat (IND mob/demob, outside the catalog envelope) while
-    every BGTC R_i stays below the 1.5 ERRO limit; a 2% markup then clears the
-    regulatory BDI floor over C^cat (~27.5% >= 20%) with a 1/51 margin < 1/20."""
-    tariff = spec["skill_inputs"]["05-equipes-e-alocacao"]["rcpsp_spec"]["p16_exact_tariffs"]
-    tariff["EQ-USINA-SOLOS-300TH"].update(mobilize="1100000.00", demobilize="1100000.00")
-    _markup("1/50")(spec)
+def _layers(ac: str, profit: str, markup: str | None):
+    """Redeclare the markup layers of every category (AC and profit L; R+S+G, DF and
+    taxes stay 0). ``markup`` is the declared consequence ``bdi_by_category``, which
+    must equal (1 + AC)(1 + L) - 1; ``None`` leaves the fixture's 3/10 untouched."""
+
+    def mutate(spec: dict) -> None:
+        evidence = _p21(spec)
+        evidence["markup_layers"] = {
+            category: {"ac": ac, "rsg": "0", "df": "0", "l": profit, "taxes": {}} for category in _CATEGORIES
+        }
+        if markup is not None:
+            evidence["bdi_by_category"] = dict.fromkeys(_CATEGORIES, markup)
+
+    return mutate
+
+
+# Golden layers: AC 1/10, L 2/11 -> markup 3/10, profit layer 2/13 of the price.
+#
+# V2 falsifier: no overhead, L 1/10 -> markup 1/10. The price is P20 cost * 11/10,
+# below the 1/5 floor over C^cat; the profit layer is (1/10)/(11/10) = 1/11 of the
+# price >= 1/20, so PROFITABILITY still passes and the NOGO is V2's alone.
+_MARKUP_ONE_TENTH = _layers("0", "1/10", "1/10")
+# Negative layer: L = -1 would give P = 0 <= C_tot. bdi_by_category stays the
+# valid 3/10, so the refusal is the negative layer rate itself.
+_NEGATIVE_PROFIT_LAYER = _layers("0.10", "-1", None)
+# PROFITABILITY falsifier: AC 1/4, L 1/25 -> (5/4)(26/25) = 13/10, the SAME markup
+# 3/10 as the golden run. Price, P20 cost and BDI over C^cat are therefore the
+# golden ones (V2 passes with the same margin over the 1/5 floor), and
+# (P - C)/P = 3/13 ~ 23.1% would clear the 1/20 minimum. The profit layer is
+# C * 5/4 * 1/25 = C/20 of a price 13C/10: share (1/20)/(13/10) = 1/26 ~ 3.85%
+# < 1/20. All categories share the layers, so the share is 1/26 whatever the cost
+# mix. Only the profit-layer criterion fails.
+_THIN_PROFIT_LAYER_AT_THE_GOLDEN_MARKUP = _layers("0.25", "0.04", None)
 
 
 # (label, scenario, mutation, gate that must not PASS, expected decision or None,
@@ -193,10 +218,10 @@ FALSIFIERS = [
     (
         "V2: markup too low for the regulatory floor over C^cat",
         "single_plant_sequence",
-        _markup("1/10"),
+        _MARKUP_ONE_TENTH,
         "V2",
         "NOGO",
-        (),
+        ("V1", "V3", "V4", "V5", "V6", "PRICE_PRESENT", "FINANCIAL_COST_RECONCILIATION", "PROFITABILITY"),
     ),
     (
         "V1: calendar too short to close the physical scope",
@@ -232,15 +257,26 @@ FALSIFIERS = [
         None,
         (),
     ),
-    # P21 refuses negative category markups, so P <= C_tot (and P <= 0) cannot be
+    # P21 refuses negative layer rates, so P <= C_tot (and P <= 0) cannot be
     # priced at all: no operational price is published.
     (
-        "V4/PRICE: negative markup (P <= C_tot) is refused, no price",
+        "V4/PRICE: negative profit layer (P <= C_tot) is refused, no price",
         "single_plant_sequence",
-        _markup("-1"),
+        _NEGATIVE_PROFIT_LAYER,
         "PRICE_PRESENT",
         "NOGO",
         (),
+    ),
+    # N9: layers are mandatory. A flat bdi_by_category (here the golden 3/10, which
+    # priced a GO before layers were required) is not a price declaration: Skill06
+    # builds no evidence, nothing is priced and the run is never GO.
+    (
+        "PRICE: flat markup without declared layers is not priced",
+        "single_plant_sequence",
+        lambda s: _p21(s).pop("markup_layers"),
+        "PRICE_PRESENT",
+        "NOGO",
+        ("V1", "V3", "V5", "V6"),
     ),
     (
         "V6: RCPSP conflict, pool smaller than the team",
@@ -271,9 +307,9 @@ FALSIFIERS = [
         ("V1", "V3", "V5", "V6"),
     ),
     (
-        "PROFITABILITY: BDI above the floor but margin below the minimum",
+        "PROFITABILITY: BDI above the floor but profit layer below the minimum",
         "sharing_theta_standby_remob",
-        _expensive_plant_mobilisation_at_two_percent_markup,
+        _THIN_PROFIT_LAYER_AT_THE_GOLDEN_MARKUP,
         "PROFITABILITY",
         "NOGO",
         ("V1", "V2", "V3", "V4", "V5", "V6", "REGULATORY_BDI_BASIS", "PRICE_PRESENT", "FINANCIAL_COST_RECONCILIATION"),

@@ -971,6 +971,12 @@ def _pricing_status(
         profitability = (
             profit_status,
             {
+                # N9: the criterion is the profit layer's share of the price;
+                # "profit"/"margin" are the gross result P - C and (P - C)/P,
+                # which also hold overhead and taxes and are not compared.
+                "profit_layer": str(_read(pricing_gates, "profit_layer_amount")),
+                "profit_layer_share": str(_read(pricing_gates, "profit_layer_share")),
+                "minimum": str(_read(pricing_gates, "minimum_profit_margin")),
                 "profit": str(_read(pricing_gates, "profit_amount")),
                 "margin": str(_read(pricing_gates, "realized_margin")),
             },

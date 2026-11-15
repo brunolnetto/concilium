@@ -269,12 +269,13 @@ def test_inconsistent_provenance_is_rejected(monkeypatch, mutate, match: str) ->
 
 
 def test_adapter_refuses_provenance_without_layers() -> None:
+    """Layers are mandatory (N9): a provenance block cannot stand in for them."""
     from tests.unit.application.scheduling.test_p21_runtime_pricing_integration import _json_runtime_fixture
 
     canonical, catalogo, declaration = _json_runtime_fixture()
-    assert "markup_layers" not in declaration
-    declaration = {**declaration, "markup_layers_provenance": {"schema": PROVENANCE_SCHEMA}}
-    with pytest.raises(ValueError, match="requires declared markup_layers"):
+    declaration = {k: v for k, v in declaration.items() if k != "markup_layers"}
+    declaration["markup_layers_provenance"] = {"schema": PROVENANCE_SCHEMA}
+    with pytest.raises(ValueError, match="markup_layers is required"):
         build_pricing_report_evidence_context(canonical, catalogo, declaration)
 
 

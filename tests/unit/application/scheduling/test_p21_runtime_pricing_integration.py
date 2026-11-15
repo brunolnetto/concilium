@@ -14,6 +14,7 @@ from concilium.application.scheduling.contractual_cost_ledger import (
     ExclusiveCostLedger,
     PostingNature,
 )
+from concilium.application.scheduling.markup_layers import LayerRates
 from concilium.application.scheduling.operational_pricing_diagnostics import (
     CatalogPriceBenchmark,
 )
@@ -143,7 +144,8 @@ def test_invalid_typed_financial_sources_fail_closed_in_auto_go() -> None:
     assert validations[-1].status == "ERRO"
 
 
-def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() -> None:
+def _typed_context() -> dict[str, object]:
+    """Complete typed evidence (N9 layers included) for the adapter's direct boundary."""
     pool = ExclusiveCostLedger((
         CostPosting(
             ("POOL", "R", "ACTIVE"), PostingNature.ACTIVE,
@@ -187,6 +189,15 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
             "COMB": F(3, 10),
             "IND": F(1, 4),
         },
+        # N9: declared layers whose markup is exactly the rates above. Profit
+        # layer: EQ 14 * 1.1 / 11 = 7/5, IND 9/4, MAT 5/2 * 1.25 / 5 = 5/8.
+        "markup_layers": {
+            "MO": LayerRates(F(0), F(0), F(0), F(1, 10)),
+            "EQ": LayerRates(F(1, 10), F(0), F(0), F(1, 11)),
+            "MAT": LayerRates(F(1, 4), F(0), F(0), F(1, 5)),
+            "COMB": LayerRates(F(1, 10), F(0), F(0), F(2, 11)),
+            "IND": LayerRates(F(0), F(0), F(0), F(1, 4)),
+        },
         "catalog": CatalogPriceBenchmark(
             amount=F(100),
             currency="BRL",
@@ -206,24 +217,74 @@ def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() ->
         ),
         "minimum_profit_margin": F(0),
     }
+    return context
+
+
+def _apply_typed(context: dict[str, object], intent: str = "PREVIEW"):
     result = _result()
     validations: list = []
     apply_pricing_report_evidence(
         result,
-        {"certification_intent": "PREVIEW", "p20_financial_sources": context},
+        {"certification_intent": intent, "p20_financial_sources": context},
         validations,
     )
+    return result, validations
+
+
+def test_typed_p20_sources_reach_one_shared_operational_and_regulatory_gate() -> None:
+    result, validations = _apply_typed(_typed_context())
 
     assert result.pricing_diagnostics["operational_price"] == "159/5"
     assert result.pricing_diagnostics["total_cost"] == "51/2"
     assert result.pricing_gates["regulatory_status"] == "FAIL"
     assert result.pricing_gates["profitability_status"] == "PASS"
+    assert result.pricing_gates["profit_layer_amount"] == "171/40"
+    assert result.pricing_gates["profit_layer_share"] == "57/424"
+    assert result.markup_layers["total"]["price"] == "159/5"
     assert result.pricing_gates["status"] == "FAIL"
     assert validations[-1].codigo == "VAL-P21-PRICE-GATES"
     assert validations[-1].status == "AVISO"
 
 
+def _without(context: dict[str, object], key: str) -> dict[str, object]:
+    return {k: v for k, v in context.items() if k != key}
+
+
+@pytest.mark.parametrize(
+    ("mutate", "reason"),
+    [
+        (lambda c: _without(c, "markup_layers"), "must declare markup layers"),
+        (lambda c: {**c, "markup_layers": None}, "must declare markup layers"),
+        (
+            lambda c: {**c, "markup_layers": _without(c["markup_layers"], "IND")},  # type: ignore[arg-type]
+            "must declare markup layers",
+        ),
+        (
+            lambda c: {**c, "markup_layers": {**c["markup_layers"], "MO": {"l": "1/10"}}},  # type: ignore[dict-item]
+            "must declare markup layers",
+        ),
+        # A flat rate that is not the layers' own markup is not the declared price.
+        (
+            lambda c: {**c, "bdi_by_category": {**c["bdi_by_category"], "EQ": F(1, 4)}},  # type: ignore[dict-item]
+            "bdi_by_category differs from the declared markup layers for EQ",
+        ),
+    ],
+)
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_n9_typed_evidence_without_consistent_markup_layers_is_not_priced(mutate, reason: str, intent: str) -> None:
+    """N9: there is no flat path — without declared layers nothing is priced or graded."""
+    result, validations = _apply_typed(mutate(_typed_context()), intent)
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert result.pricing_gates["profitability_status"] == "UNKNOWN"
+    assert reason in result.pricing_gates["reason"]
+    assert "operational_price" not in result.pricing_diagnostics
+    assert result.markup_layers is None
+    assert validations[-1].codigo == "VAL-P21-PRICE-EVIDENCE"
+    assert validations[-1].status == ("ERRO" if intent == "CERTIFIED" else "AVISO")
+
+
 C_CAT_FIXTURE = "6462935383/44925750"
+_ZERO_LAYERS: dict[str, object] = {"ac": "0", "rsg": "0", "df": "0", "l": "0", "taxes": {}}
 
 
 def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str, object]]:
@@ -319,9 +380,16 @@ def _json_runtime_fixture() -> tuple[CanonicalModel, dict[str, object], dict[str
             # Hand check: the fixture ledger carries only diesel (no P16 pool),
             # while C^cat counts the full production team (~143.858). With
             # COMB markup 3: P = diesel 42.804*4 + ORE 10 (MAT, 0) + IND 1.512
-            # = 182.728 -> BDI over C^cat ~27.0% >= 10% floor, margin ~70.3% >= 20%.
+            # = 182.728 -> BDI over C^cat ~27.0% >= 10% floor.
             "COMB": "3",
             "IND": "0",
+        },
+        # N9: the layers are the declaration. COMB (1 + AC 1)(1 + L 1) = 4 -> markup 3;
+        # profit layer = 42.804 * 2 * 1 = 85.608 -> 85.608/182.728 ~46.9% of the price
+        # >= 20% (the other half of P - C is overhead, not profit).
+        "markup_layers": {
+            **{category: dict(_ZERO_LAYERS) for category in ("MO", "EQ", "MAT", "IND")},
+            "COMB": {**_ZERO_LAYERS, "ac": "1", "l": "1"},
         },
         "catalog": {
             # Independent oracle (tests/reference_formalism/catalog_envelope_reference.py).
@@ -455,6 +523,9 @@ def test_real_skill06_json_contract_builds_p19_p20_and_reaches_p21_pass(monkeypa
     assert result.pricing_diagnostics["operational_basis_fingerprint"] == "physical-scope-2026-v1"
     assert result.pricing_diagnostics["inventory_scope_reference_id"] == "stocktake-2026-10-01"
     assert result.pricing_diagnostics["bdi_rate_comb"] == "3"
+    assert result.pricing_gates["profit_layer_amount"] == str(F("85.608"))
+    assert result.pricing_gates["profit_layer_share"] == str(F("85.608") / F("182.728"))
+    assert result.markup_layers["total"]["overhead"] == str(F("42.804"))
     assert result.pricing_diagnostics["operational_price"] == str(F("182.728"))
     assert result.pricing_diagnostics["total_cost"] == str(F("54.316"))
     assert result.pricing_gates["schema"] == "concilium.p21.pricing-gates.v1"
@@ -828,3 +899,39 @@ def test_typed_context_scope_must_agree_with_the_journal() -> None:
     )
     assert result.pricing_gates["status"] == "UNKNOWN"
     assert "requires the site_indirects declaration" in result.pricing_gates["reason"]
+
+
+# --- N9: markup layers are mandatory at the JSON boundary (no flat declaration) ---
+
+
+@pytest.mark.parametrize("intent", ["PREVIEW", "CERTIFIED"])
+def test_n9_declaration_without_markup_layers_is_not_priced(monkeypatch, intent: str) -> None:
+    outcome, seen = _run_skill06_with(monkeypatch, {"markup_layers": None}, certification_intent=intent)
+    result = seen["result"]
+    assert "markup_layers is required" in seen["context"]["source_build_error"]
+    assert result.pricing_gates["status"] == "UNKNOWN"
+    assert result.pricing_gates["profitability_status"] == "UNKNOWN"
+    assert "total_cost" not in result.pricing_diagnostics and "operational_price" not in result.pricing_diagnostics
+    assert result.markup_layers is None
+    assert outcome.has_errors is (intent == "CERTIFIED")
+
+
+@pytest.mark.parametrize(
+    ("layers", "reason"),
+    [
+        (
+            {"COMB": {**_ZERO_LAYERS, "l": "3"}, "MO": {**_ZERO_LAYERS, "l": "1/100"}},
+            "differs from the declared markup layers for MO",
+        ),
+        ({"COMB": {**_ZERO_LAYERS, "l": "-1"}}, "markup_layers.COMB.l must be nonnegative"),
+        ({"COMB": {**_ZERO_LAYERS, "l": 3.0}}, "must be an exact decimal or rational string"),
+        ({"COMB": {"l": "3"}}, "must declare exactly ac, rsg, df, l and taxes"),
+        ({"COMB": None}, "must declare exactly ac, rsg, df, l and taxes"),
+    ],
+)
+def test_n9_inconsistent_markup_layers_are_rejected(monkeypatch, layers: dict, reason: str) -> None:
+    declared = {category: dict(_ZERO_LAYERS) for category in ("MO", "EQ", "MAT", "COMB", "IND")}
+    _outcome, seen = _run_skill06_with(monkeypatch, {"markup_layers": {**declared, **layers}})
+    assert reason in seen["context"]["source_build_error"]
+    assert seen["result"].pricing_gates["status"] == "UNKNOWN"
+    assert seen["result"].markup_layers is None
