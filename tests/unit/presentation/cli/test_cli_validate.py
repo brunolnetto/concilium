@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_validate import (
@@ -13,6 +14,7 @@ from concilium.presentation.cli.commands_validate import (
     _val_status_color,
     app,
 )
+from tests.support.exact_financial import evaluated_resultado, unknown_resultado
 
 runner = CliRunner()
 
@@ -125,12 +127,14 @@ class TestValidateProjectCommand:
             result = runner.invoke(app, ["project", "p"])
         assert result.exit_code == 0
 
-    def test_project_with_margem(self):
+    def test_project_with_exact_financials(self):
+        """#206: the payload carries the exact view; the legacy margin/status are not emitted.
+
+        Replaces the former assertion that "margem_pct"/"15.00" appeared in the output.
+        """
         canonical = MagicMock()
         canonical.model_dump.return_value = {}
-        canonical.resultado = MagicMock()
-        canonical.resultado.margem_pct = 0.15
-        canonical.resultado.status_margem = "APROVADO"
+        canonical.resultado = evaluated_resultado(legacy={"margem_pct": 0.15, "status_margem": "APROVADO"})
         project = self._setup_project(canonical)
 
         with (
@@ -140,7 +144,32 @@ class TestValidateProjectCommand:
             result = runner.invoke(app, ["project", "p", "--json"])
         assert result.exit_code == 0
         output = result.output
-        assert "margem_pct" in output or "15.00" in output
+        assert "financeiro_exato" in output and "AVALIADO" in output and "159/5" in output
+        assert "margem_pct" not in output and "status_margem" not in output and "APROVADO" not in output
+
+    @pytest.mark.parametrize("exact", [True, False])
+    def test_project_human_output_shows_layers_or_not_evaluated(self, exact):
+        canonical = MagicMock()
+        canonical.model_dump.return_value = {}
+        legacy = {"margem_pct": 0.15, "status_margem": "APROVADO"}
+        canonical.resultado = evaluated_resultado(legacy=legacy) if exact else unknown_resultado(legacy=legacy)
+        canonical.contratos_recurso = []
+        project = self._setup_project(canonical)
+
+        with (
+            patch("concilium.presentation.cli.commands_validate.parse_project_version", return_value=("p", None)),
+            patch("concilium.presentation.cli.commands_validate.resolve_project", return_value=project),
+        ):
+            result = runner.invoke(app, ["project", "p"])
+        assert result.exit_code == 0
+        output = result.output
+        assert "Margem" not in output and "APROVADO" not in output and "15.00" not in output
+        if exact:
+            assert "Overhead" in output and "Lucro" in output and "Tributos" in output
+            assert "Gates de preço: PASS" in output
+        else:
+            assert "Financeiro exato: não avaliado" in output and "Como resolver" in output
+            assert "Overhead" not in output
 
 
 class TestValidateBenchmarkCommand:

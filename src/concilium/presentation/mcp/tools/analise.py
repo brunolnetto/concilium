@@ -6,6 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view, exact_deltas
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import _project, _runtime, _wrap_response
 
@@ -56,7 +57,6 @@ def register(server: FastMCP) -> None:
         if not canonical:
             return {"erro": "Plano sem dados canônicos. Execute disparar_pipeline primeiro."}
 
-        res = canonical.resultado
         return _wrap_response(
             {
                 "project_id": project_id,
@@ -67,11 +67,8 @@ def register(server: FastMCP) -> None:
                     "conflitos_recurso": len(canonical.conflitos_pico),
                     "integridade_pipeline": canonical.pipeline_integridade,
                 },
-                "financeiro": {
-                    "custo_total": res.custo.total if res else 0,
-                    "margem_pct": res.margem_pct if res else 0,
-                    "status_margem": res.status_margem if res else "VERMELHO",
-                },
+                # #206: exact view only (layers + gate states, or NAO_AVALIADO with reasons).
+                "financeiro_exato": build_exact_financial_view(canonical),
                 "gargalos": [
                     {"recurso": g.recurso_id, "periodo": g.periodo_inicio.isoformat(), "excesso": g.excedente}
                     for g in canonical.conflitos_pico[:5]
@@ -87,19 +84,24 @@ def register(server: FastMCP) -> None:
         es = store.escopo(escopo_id)
 
         results = {}
+        views: dict[str, dict[str, Any]] = {}
         for pid in [plano_a, plano_b]:
             ps = es.plan(pid)
             can = ps.load_canonical()
             if can and can.resultado:
+                views[pid] = build_exact_financial_view(can)
                 results[pid] = {
-                    "custo": can.resultado.custo.total,
-                    "margem": can.resultado.margem_pct,
+                    "financeiro_exato": views[pid],
                     "termino": can.projeto.data_termino.isoformat(),
                 }
             else:
                 results[pid] = "Sem dados"  # type: ignore[assignment]
 
-        return _wrap_response({"comparacao": results})
+        out: dict[str, Any] = {"comparacao": results}
+        if plano_a in views and plano_b in views:
+            # plano_b - plano_a, exact; None (with reasons) unless both are evaluated.
+            out["deltas_financeiro_exato"] = exact_deltas(views[plano_a], views[plano_b])
+        return _wrap_response(out)
 
     @server.tool()
     @permission("project:read")

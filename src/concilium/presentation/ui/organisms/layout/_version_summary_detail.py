@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import streamlit as st
 
+from ...helpers import financeiro_exato as fx
 from ...infra.api import api_call
-from ._charts import _format_currency, _format_int, _format_percent
+from ._charts import _format_int
 
 
 def _collect_last_run(base_url: str, project_id: str, actor: str) -> tuple[dict, dict]:
@@ -21,6 +22,40 @@ def _collect_last_run(base_url: str, project_id: str, actor: str) -> tuple[dict,
     raw_summary = last_run.get("summary")
     summary = raw_summary if isinstance(raw_summary, dict) else {}
     return last_run, summary
+
+
+def _collect_run_certificate(base_url: str, project_id: str, run_id: object, actor: str) -> dict | None:
+    """Certificado P23 revalidado da execução (a listagem de runs não o revalida)."""
+    if not run_id:
+        return None
+    try:
+        detail = api_call(
+            method="GET", path=f"/api/projects/{project_id}/runs/{run_id}", base_url=base_url, actor=actor
+        )
+    except Exception:
+        return None
+    certificate = detail.get("formalism_certificate") if isinstance(detail, dict) else None
+    return certificate if isinstance(certificate, dict) else None
+
+
+def _render_exact_financial(summary: dict, certificate: dict | None, key: str) -> None:
+    """Camadas de markup e estados dos gates; "não avaliado" com motivos. Sem semáforo de margem."""
+    view = fx.summary_view(summary)
+    if fx.is_evaluated(view):
+        for col, card in zip(st.columns(5), fx.layer_cards(view), strict=True):
+            col.metric(card["label"], card["value"])
+        st.caption(fx.APROXIMACAO_TEXTO)
+    else:
+        st.warning("Financeiro exato: **não avaliado**. Nenhum custo, preço ou margem é exibido.")
+        for line in fx.not_evaluated_lines(view):
+            st.markdown(f"- {line}")
+    gates = fx.gate_rows(view, certificate)
+    if gates:
+        st.dataframe(gates, hide_index=True, width="stretch", key=f"fx-gates-{key}")
+    if fx.is_evaluated(view):
+        with st.expander("Camadas por categoria e valores exatos", expanded=False):
+            st.dataframe(fx.category_rows(view), hide_index=True, width="stretch", key=f"fx-cat-{key}")
+            st.dataframe(fx.exact_rows(view), hide_index=True, width="stretch", key=f"fx-exact-{key}")
 
 
 def _collect_override_summary(base_url: str, project_id: str, actor: str) -> list[str]:
@@ -53,17 +88,17 @@ def render_version_summary(base_url: str, project: dict, actor: str) -> None:
 
     project_id = project["project_id"]
     last_run, summary = _collect_last_run(base_url, project_id, actor)
-    col_last, col_status, col_dur, col_custo, col_margem, col_pe = st.columns(6)
+    col_last, col_status, col_dur, col_pe = st.columns(4)
     _ts_raw = last_run.get("started_at", "-")
     _ts_fmt = _ts_raw[:16].replace("T", " ") if _ts_raw and _ts_raw != "-" else "-"
     col_last.metric("Última execução", _ts_fmt)
     col_status.metric("Status", last_run.get("status", "-"))
     col_dur.metric("Versão da última run", last_run.get("version", "-"))
-    col_custo.metric("Custo total", _format_currency(summary.get("custo_total")))  # type: ignore[union-attr]
-    col_margem.metric("Margem prevista", _format_percent(summary.get("margem_pct")))  # type: ignore[union-attr]
     col_pe.metric("Ponto de Equilíbrio — itens em déficit", _format_int(summary.get("pe_deficit_items")))  # type: ignore[union-attr]
     col_pe.caption(f"Alertas de P.E.: {_format_int(summary.get('pe_alerta_items'))}")  # type: ignore[union-attr]
     if last_run:
+        certificate = _collect_run_certificate(base_url, project_id, last_run.get("run_id"), actor)
+        _render_exact_financial(summary, certificate, key=f"summary-{project_id}")
         st.caption(
             "ℹ️ Valores financeiros baseados na última execução e não refletem"
             " o estado definitivo até a versão ser comitada."
@@ -93,20 +128,14 @@ def _fetch_version_runs(base_url: str, project_id: str, actor: str, selected: st
 
 
 def _render_version_last_run_metrics(last: dict) -> None:
-    """Renderiza as métricas (status, timestamp, custo, margem, déficit P.E.) da última run."""
+    """Renderiza status, timestamp e déficit P.E. da última run, e o financeiro exato dela."""
     summary = last.get("summary") or {}
-    col_status, col_ts, col_custo, col_margem, col_pe = st.columns(5)
+    col_status, col_ts, col_pe = st.columns(3)
     _ts = str(last.get("started_at") or "-")
     col_status.metric("Status", last.get("status", "-"))
     col_ts.metric("Última execução", _ts[:16].replace("T", " ") if len(_ts) > 10 else _ts)
-    col_custo.metric("Custo total", _format_currency(summary.get("custo_total")))
-    col_margem.metric("Margem prevista", _format_percent(summary.get("margem_pct")))
     col_pe.metric("Itens déficit P.E.", _format_int(summary.get("pe_deficit_items")))
-    if summary.get("custo_total") is None and last.get("status") == "OK":
-        st.caption(
-            "ℹ️ Pipeline concluída sem dados financeiros — a skill de consolidação (resultado) "
-            "pode não ter sido executada ou o canônico não atingiu o skill 13."
-        )
+    _render_exact_financial(summary, None, key=f"detail-{last.get('run_id') or 'run'}")
 
 
 def _render_version_runs_table(version_runs: list) -> None:
@@ -120,8 +149,7 @@ def _render_version_runs_table(version_runs: list) -> None:
             "Início": str(r.get("started_at") or "-")[:16].replace("T", " "),
             "Fim": str(r.get("finished_at") or "-")[:16].replace("T", " "),
             "Fork de": r.get("base_version") or "-",
-            "Custo": _format_currency((r.get("summary") or {}).get("custo_total")),
-            "Margem": _format_percent((r.get("summary") or {}).get("margem_pct")),
+            **fx.run_row_cells(r.get("summary")),
         }
         for r in version_runs
     ]

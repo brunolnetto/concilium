@@ -2,8 +2,10 @@
 
 import typer
 from rich import print as rprint
+from rich.markup import escape as rich_escape
 from rich.table import Table
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view, text_lines
 from concilium.presentation.cli.shared import (
     config_root,
     parse_project_version,
@@ -171,10 +173,9 @@ def audit(
     rprint(f"  Integridade: [{cor_int}]{status_int}[/{cor_int}]")
 
     # 2. Financeiro
-    if canonical.resultado:
-        res = canonical.resultado
-        rprint(f"  Margem:      [bold]{res.margem_pct * 100:.2f}%[/bold] ({res.status_margem})")
-        rprint(f"  Custo Total: R$ {res.custo.total:,.2f}")
+    # #206: only the exact view (markup layers + gate states), or "não avaliado" with reasons.
+    for line in text_lines(build_exact_financial_view(canonical)):
+        rprint("  " + rich_escape(line))
 
     # 3. Gargalos (Recursos)
     _audit_print_conflitos(canonical.conflitos_pico)

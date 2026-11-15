@@ -18,6 +18,7 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id, register
+from tests.support.exact_financial import evaluated_resultado, unknown_resultado
 
 # ---------------------------------------------------------------------------
 # Fixture: build server and extract tool callables
@@ -105,7 +106,7 @@ class TestConsultarEstruturaProjeto:
         assert result["escopos"] == []
 
     def test_escopo_with_plans_canonical_resultado_none(self, tools):
-        """Escopo with one plan where canonical.resultado is None → margem_pct is None."""
+        """Plan without a result → no financial block at all (no margin, no default)."""
         # Build plan store mock
         ps = MagicMock()
         ps.meta = {"nome": "Plano A", "status": "rascunho"}
@@ -141,15 +142,15 @@ class TestConsultarEstruturaProjeto:
         assert plano_out["plano_id"] == "plano-001"
         assert plano_out["nome"] == "Plano A"
         assert plano_out["status"] == "rascunho"
-        assert plano_out["margem_pct"] is None
+        assert "margem_pct" not in plano_out
+        assert plano_out["financeiro_exato"] is None
 
     def test_escopo_with_plans_canonical_resultado_set(self, tools):
-        """Escopo with plan where canonical.resultado has margem_pct set."""
+        """Evaluated plan → compact exact view (layers + gate states); the legacy margin never appears."""
         ps = MagicMock()
         ps.meta = {"nome": "Plano B", "status": "aprovado"}
         can = MagicMock()
-        can.resultado = MagicMock()
-        can.resultado.margem_pct = 15.5
+        can.resultado = evaluated_resultado(legacy={"margem_pct": 15.5, "status_margem": "VERDE"})
         ps.load_canonical.return_value = can
 
         es = MagicMock()
@@ -170,10 +171,42 @@ class TestConsultarEstruturaProjeto:
             result = tools["consultar_estrutura_projeto"](project_id="proj-002")
 
         plano_out = result["escopos"][0]["planos"][0]
-        assert plano_out["margem_pct"] == 15.5
+        assert "margem_pct" not in plano_out
+        fin = plano_out["financeiro_exato"]
+        assert fin["status"] == "AVALIADO"
+        assert fin["cost_total"] == "51/2" and fin["price"] == "159/5"
+        assert fin["layers"]["profit"] == "171/40" and fin["profit_layer_share"] == "57/424"
+        assert fin["gates"]["status"] == "PASS"
+        assert "15.5" not in str(plano_out) and "VERDE" not in str(plano_out)
+
+    def test_plan_with_legacy_only_result_is_not_evaluated(self, tools):
+        """A result carrying only legacy floats shows NAO_AVALIADO with reasons, never the float."""
+        ps = MagicMock()
+        ps.meta = {"nome": "Plano L", "status": "rascunho"}
+        can = MagicMock()
+        can.resultado = unknown_resultado(legacy={"margem_pct": 15.5, "status_margem": "VERDE"})
+        can.contratos_recurso = []
+        ps.load_canonical.return_value = can
+        es = MagicMock()
+        es.meta = {"nome": "Escopo L", "tipo_obra": "pavimentacao", "status": "rascunho"}
+        es.list_plans.return_value = ["plano-00L"]
+        es.plan.return_value = ps
+        store = _make_store(escopos=["esc-00L"])
+        store.escopo.return_value = es
+
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._wrap_response", side_effect=lambda x: x),
+        ):
+            result = tools["consultar_estrutura_projeto"](project_id="proj-00L")
+
+        fin = result["escopos"][0]["planos"][0]["financeiro_exato"]
+        assert fin["status"] == "NAO_AVALIADO"
+        assert [r["code"] for r in fin["reasons"]] == ["SEM_CONTRATOS_DE_POOL", "DECLARACAO_PRECO_AUSENTE"]
+        assert set(fin) == {"status", "reasons"}
 
     def test_canonical_load_returns_none_margem_pct_none(self, tools):
-        """When load_canonical returns None (not just resultado=None) → margem_pct is None."""
+        """When load_canonical returns None (not just resultado=None) → no financial block."""
         ps = MagicMock()
         ps.meta = {"nome": "Plano C", "status": "rascunho"}
         ps.load_canonical.return_value = None  # entire canonical is None
@@ -196,7 +229,8 @@ class TestConsultarEstruturaProjeto:
             result = tools["consultar_estrutura_projeto"](project_id="proj-003")
 
         plano_out = result["escopos"][0]["planos"][0]
-        assert plano_out["margem_pct"] is None
+        assert "margem_pct" not in plano_out
+        assert plano_out["financeiro_exato"] is None
 
     def test_multiple_escopos(self, tools):
         """Multiple escopos are all returned in output list."""

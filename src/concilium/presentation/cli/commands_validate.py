@@ -13,8 +13,10 @@ from typing import Any
 
 import typer
 from rich import print as rprint
+from rich.markup import escape as rich_escape
 from rich.table import Table
 
+from concilium.application.scheduling.exact_financial_view import build_exact_financial_view, text_lines
 from concilium.presentation.cli.shared import _tools_root, parse_project_version, resolve_project
 
 app = typer.Typer(
@@ -76,11 +78,9 @@ def _render_human(payload: dict[str, Any]) -> None:
         f"Fonte: contexto={payload['source'].get('contexto_id')} versão={payload['source'].get('version')} ts={payload['source'].get('timestamp')}"  # noqa: E501
     )
 
-    if payload.get("margem_pct") is not None:
-        margem_pct = payload["margem_pct"]
-        status_margem = payload.get("status_margem", "")
-        color = "green" if str(status_margem).upper() == "APROVADO" else "yellow"
-        rprint(f"Margem: [{color}]{margem_pct * 100:.2f}%[/{color}] ({status_margem})")
+    if isinstance(payload.get("financeiro_exato"), dict):
+        for line in text_lines(payload["financeiro_exato"]):
+            rprint(rich_escape(line))
 
     resumo = payload.get("resumo_convergencia") or _empty_resumo()
     rprint(
@@ -133,8 +133,8 @@ def validate_project(
         "validacoes": validacoes,
     }
     if canonical.resultado:
-        payload["margem_pct"] = canonical.resultado.margem_pct
-        payload["status_margem"] = getattr(canonical.resultado, "status_margem", "")
+        # #206: exact view only; the legacy margin and its status are no longer emitted.
+        payload["financeiro_exato"] = build_exact_financial_view(canonical)
 
     if as_json:
         rprint(json.dumps(payload, indent=2, ensure_ascii=False))
